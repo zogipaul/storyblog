@@ -63,34 +63,43 @@ struct EditorView: View {
     }
 
     private var editorFields: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            LabeledContent("Title") {
+        VStack(alignment: .leading, spacing: 14) {
+            StoryInputField(title: "Title", systemImage: "textformat.size") {
                 TextField("A sharp, story-sized headline", text: $draft.title, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1...3)
+                    .textInputAutocapitalization(.sentences)
                     .multilineTextAlignment(.leading)
+                    .storyInputPadding()
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Body")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
+            StoryInputField(title: "Body", systemImage: "text.alignleft") {
                 TextEditor(text: $draft.body)
-                    .frame(minHeight: 190)
-                    .padding(8)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                    }
+                    .font(.body)
+                    .lineSpacing(3)
+                    .frame(minHeight: 184)
+                    .scrollContentBackground(.hidden)
+                    .storyInputPadding()
             }
 
-            LabeledContent("Author/date") {
+            StoryInputField(title: "Author/date", systemImage: "calendar") {
                 TextField("Optional", text: $draft.authorDateLine, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1...2)
+                    .textInputAutocapitalization(.words)
                     .multilineTextAlignment(.leading)
+                    .storyInputPadding()
             }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .shadow(color: .black.opacity(0.06), radius: 18, x: 0, y: 10)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.72), lineWidth: 1)
         }
     }
 
@@ -144,4 +153,50 @@ private struct ExportAlert: Identifiable {
     let id = UUID()
     let title: String
     let message: String
+}
+
+private struct StoryInputField<Content: View>: View {
+    let title: String
+    let systemImage: String
+    private let content: Content
+
+    init(title: String, systemImage: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 15)
+            }
+            .labelStyle(.titleAndIcon)
+
+            content
+                .background {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .fill(Color(uiColor: .systemBackground).opacity(0.86))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                }
+        }
+    }
+}
+
+private extension View {
+    func storyInputPadding() -> some View {
+        padding(.horizontal, 14)
+            .padding(.vertical, 12)
+    }
 }
