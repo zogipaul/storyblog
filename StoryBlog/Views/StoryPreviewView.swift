@@ -73,7 +73,7 @@ private struct StoryCanvasContent: View {
 
                     Text(draft.trimmedAuthorDateLine.uppercased())
                         .font(StoryLayout.metadataFont)
-                        .tracking(1.8)
+                        .tracking(StoryLayout.metadataTracking)
                         .lineSpacing(StoryLayout.metadataLineSpacing)
                         .foregroundStyle(metadataColor)
                         .fixedSize(horizontal: false, vertical: true)

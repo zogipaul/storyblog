@@ -24,9 +24,10 @@ enum TextMeasurement {
         )
 
         addBlock(
-            text: draft.trimmedAuthorDateLine,
+            text: draft.trimmedAuthorDateLine.uppercased(),
             font: StoryLayout.metadataUIFont,
             lineSpacing: StoryLayout.metadataLineSpacing,
+            tracking: StoryLayout.metadataTracking,
             spacingBefore: StoryLayout.bodyMetadataSpacing,
             height: &height,
             hasPreviousBlock: &hasPreviousBlock
@@ -43,6 +44,7 @@ enum TextMeasurement {
         text: String,
         font: UIFont,
         lineSpacing: CGFloat,
+        tracking: CGFloat = 0,
         spacingBefore: CGFloat,
         height: inout CGFloat,
         hasPreviousBlock: inout Bool
@@ -57,6 +59,7 @@ enum TextMeasurement {
             text: text,
             font: font,
             lineSpacing: lineSpacing,
+            tracking: tracking,
             width: StoryLayout.contentWidth
         )
         hasPreviousBlock = true
@@ -66,6 +69,7 @@ enum TextMeasurement {
         text: String,
         font: UIFont,
         lineSpacing: CGFloat,
+        tracking: CGFloat,
         width: CGFloat
     ) -> CGFloat {
         let paragraphStyle = NSMutableParagraphStyle()
@@ -74,7 +78,8 @@ enum TextMeasurement {
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .paragraphStyle: paragraphStyle
+            .paragraphStyle: paragraphStyle,
+            .kern: tracking
         ]
 
         let size = CGSize(width: width, height: .greatestFiniteMagnitude)

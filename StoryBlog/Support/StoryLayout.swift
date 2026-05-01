@@ -15,6 +15,7 @@ enum StoryLayout {
     static let titleLineSpacing: CGFloat = 6
     static let bodyLineSpacing: CGFloat = 12
     static let metadataLineSpacing: CGFloat = 4
+    static let metadataTracking: CGFloat = 1.8
 
     static let titleBodySpacing: CGFloat = 44
     static let bodyMetadataSpacing: CGFloat = 58
