@@ -21,16 +21,17 @@ enum ExportError: LocalizedError {
 
 @MainActor
 enum ExportService {
-    static func exportStoryImage(for draft: StoryDraft) async throws {
-        let image = try renderStoryImage(for: draft)
+    static func exportStoryImage(for draft: StoryDraft, colorScheme: ColorScheme) async throws {
+        let image = try renderStoryImage(for: draft, colorScheme: colorScheme)
         let pngData = try pngData(from: image)
 
         try await requestPhotoAddPermission()
         try await savePNGToPhotoLibrary(pngData)
     }
 
-    private static func renderStoryImage(for draft: StoryDraft) throws -> UIImage {
+    private static func renderStoryImage(for draft: StoryDraft, colorScheme: ColorScheme) throws -> UIImage {
         let exportView = StoryPreviewView(draft: draft)
+            .environment(\.colorScheme, colorScheme)
             .frame(width: StoryLayout.exportSize.width, height: StoryLayout.exportSize.height)
 
         let renderer = ImageRenderer(content: exportView)

@@ -4,6 +4,7 @@ struct ExportButton: View {
     let isDisabled: Bool
     let isExporting: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: action) {
@@ -11,7 +12,7 @@ struct ExportButton: View {
                 if isExporting {
                     ProgressView()
                         .controlSize(.small)
-                        .tint(.white.opacity(0.95))
+                        .tint(buttonForegroundColor.opacity(0.95))
                         .frame(width: 16, height: 16)
                 } else {
                     Image(systemName: "square.and.arrow.down")
@@ -23,21 +24,54 @@ struct ExportButton: View {
                 Text(isExporting ? "Exporting..." : "Export PNG")
                     .font(.subheadline.weight(.bold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(buttonForegroundColor)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background {
                 Capsule(style: .continuous)
-                    .fill(.black.opacity(isDisabled || isExporting ? 0.42 : 0.88))
+                    .fill(buttonFill)
             }
             .overlay {
                 Capsule(style: .continuous)
-                    .stroke(.white.opacity(0.22), lineWidth: 1)
+                    .stroke(buttonBorderColor, lineWidth: 1)
             }
-            .shadow(color: .black.opacity(isDisabled || isExporting ? 0 : 0.16), radius: 12, x: 0, y: 6)
+            .shadow(color: buttonShadowColor, radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .disabled(isDisabled || isExporting)
+    }
+
+    private var buttonFill: Color {
+        if colorScheme == .dark {
+            if isDisabled {
+                return .white.opacity(0.18)
+            }
+
+            return .white.opacity(isExporting ? 0.72 : 0.92)
+        }
+
+        if isDisabled {
+            return .black.opacity(0.24)
+        }
+
+        return .black.opacity(isExporting ? 0.68 : 0.88)
+    }
+
+    private var buttonForegroundColor: Color {
+        if colorScheme == .dark {
+            return isDisabled ? .white.opacity(0.54) : .black.opacity(0.92)
+        }
+
+        return isDisabled ? .white.opacity(0.76) : .white
+    }
+
+    private var buttonBorderColor: Color {
+        colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.22)
+    }
+
+    private var buttonShadowColor: Color {
+        guard !isDisabled, !isExporting else { return .black.opacity(0) }
+        return colorScheme == .dark ? .black.opacity(0.34) : .black.opacity(0.16)
     }
 }

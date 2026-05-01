@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct EditorView: View {
+    @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var draft = StoryDraft()
     @State private var isExporting = false
     @State private var alert: ExportAlert?
@@ -11,6 +14,22 @@ struct EditorView: View {
 
     private var isTooLong: Bool {
         contentHeight > StoryLayout.maxContentHeight
+    }
+
+    private var appAppearance: AppAppearance {
+        get {
+            AppAppearance(rawValue: appAppearanceRaw) ?? .system
+        }
+        nonmutating set {
+            appAppearanceRaw = newValue.rawValue
+        }
+    }
+
+    private var appAppearanceBinding: Binding<AppAppearance> {
+        Binding(
+            get: { appAppearance },
+            set: { appAppearance = $0 }
+        )
     }
 
     var body: some View {
@@ -33,6 +52,11 @@ struct EditorView: View {
             .navigationTitle("StoryBlog")
             .navigationBarTitleDisplayMode(.inline)
             .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    appearanceMenu
+                }
+            }
             .alert(item: $alert) { alert in
                 Alert(
                     title: Text(alert.title),
@@ -41,6 +65,23 @@ struct EditorView: View {
                 )
             }
         }
+    }
+
+    private var appearanceMenu: some View {
+        Menu {
+            Picker("Appearance", selection: appAppearanceBinding) {
+                ForEach(AppAppearance.allCases) { appearance in
+                    Label(appearance.title, systemImage: appearance.systemImage)
+                        .tag(appearance)
+                }
+            }
+        } label: {
+            Image(systemName: appAppearance.systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.primary)
+        }
+        .accessibilityLabel("Appearance")
     }
 
     private var previewSection: some View {
@@ -54,9 +95,9 @@ struct EditorView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            .stroke(previewBorderColor, lineWidth: 1)
                     }
-                    .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 10)
+                    .shadow(color: previewShadowColor, radius: 18, x: 0, y: 10)
             }
             .aspectRatio(9 / 16, contentMode: .fit)
         }
@@ -95,11 +136,11 @@ struct EditorView: View {
         .background {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                .shadow(color: .black.opacity(0.06), radius: 18, x: 0, y: 10)
+                .shadow(color: fieldCardShadowColor, radius: 18, x: 0, y: 10)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.72), lineWidth: 1)
+                .stroke(fieldCardBorderColor, lineWidth: 1)
         }
     }
 
@@ -125,6 +166,22 @@ struct EditorView: View {
         }
     }
 
+    private var previewBorderColor: Color {
+        colorScheme == .dark ? .white.opacity(0.14) : .black.opacity(0.08)
+    }
+
+    private var previewShadowColor: Color {
+        colorScheme == .dark ? .black.opacity(0.36) : .black.opacity(0.12)
+    }
+
+    private var fieldCardBorderColor: Color {
+        colorScheme == .dark ? .white.opacity(0.08) : .white.opacity(0.72)
+    }
+
+    private var fieldCardShadowColor: Color {
+        colorScheme == .dark ? .black.opacity(0.28) : .black.opacity(0.06)
+    }
+
     private func exportStory() {
         guard !isTooLong, !isExporting else { return }
 
@@ -132,7 +189,7 @@ struct EditorView: View {
 
         Task {
             do {
-                try await ExportService.exportStoryImage(for: draft)
+                try await ExportService.exportStoryImage(for: draft, colorScheme: colorScheme)
                 alert = ExportAlert(
                     title: "Export Complete",
                     message: "Your 1080 x 1920 PNG was saved to Photos."
@@ -159,6 +216,7 @@ private struct StoryInputField<Content: View>: View {
     let title: String
     let systemImage: String
     private let content: Content
+    @Environment(\.colorScheme) private var colorScheme
 
     init(title: String, systemImage: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -188,9 +246,13 @@ private struct StoryInputField<Content: View>: View {
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                        .stroke(inputBorderColor, lineWidth: 1)
                 }
         }
+    }
+
+    private var inputBorderColor: Color {
+        colorScheme == .dark ? .white.opacity(0.08) : .black.opacity(0.07)
     }
 }
 
