@@ -2,10 +2,12 @@ import SwiftUI
 
 struct EditorView: View {
     @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
+    @AppStorage("storyHistory") private var storyHistoryData = Data()
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var draft = StoryDraft()
     @State private var isExporting = false
+    @State private var isShowingHistory = false
     @State private var alert: ExportAlert?
 
     private var contentHeight: CGFloat {
@@ -53,9 +55,27 @@ struct EditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .scrollDismissesKeyboard(.interactively)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        isShowingHistory = true
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 15, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    .accessibilityLabel("Story history")
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     appearanceMenu
                 }
+            }
+            .sheet(isPresented: $isShowingHistory) {
+                StoryHistoryView(
+                    stories: storyHistory,
+                    onSelect: loadStory,
+                    onDelete: deleteStories
+                )
             }
             .alert(item: $alert) { alert in
                 Alert(
@@ -182,6 +202,10 @@ struct EditorView: View {
         colorScheme == .dark ? .black.opacity(0.28) : .black.opacity(0.06)
     }
 
+    private var storyHistory: [StoryHistoryItem] {
+        decodeStoryHistory()
+    }
+
     private func exportStory() {
         guard !isTooLong, !isExporting else { return }
 
@@ -190,9 +214,12 @@ struct EditorView: View {
         Task {
             do {
                 try await ExportService.exportStoryImage(for: draft, colorScheme: colorScheme)
+                let wasSavedToHistory = saveCurrentStoryToHistory()
                 alert = ExportAlert(
                     title: "Export Complete",
-                    message: "Your 1080 x 1920 PNG was saved to Photos."
+                    message: wasSavedToHistory
+                        ? "Your 1080 x 1920 PNG was saved to Photos and added to history."
+                        : "Your 1080 x 1920 PNG was saved to Photos."
                 )
             } catch {
                 alert = ExportAlert(
@@ -203,6 +230,44 @@ struct EditorView: View {
 
             isExporting = false
         }
+    }
+
+    private func loadStory(_ story: StoryHistoryItem) {
+        draft = story.draft
+        isShowingHistory = false
+    }
+
+    private func saveCurrentStoryToHistory() -> Bool {
+        guard !isDraftEmpty else { return false }
+
+        var stories = decodeStoryHistory()
+        stories.removeAll { $0.draft == draft }
+        stories.insert(StoryHistoryItem(draft: draft), at: 0)
+        saveStoryHistory(Array(stories.prefix(30)))
+
+        return true
+    }
+
+    private func deleteStories(at offsets: IndexSet) {
+        var stories = decodeStoryHistory()
+        stories.remove(atOffsets: offsets)
+        saveStoryHistory(stories)
+    }
+
+    private var isDraftEmpty: Bool {
+        draft.trimmedTitle.isEmpty &&
+            draft.trimmedBody.isEmpty &&
+            draft.trimmedAuthorDateLine.isEmpty
+    }
+
+    private func decodeStoryHistory() -> [StoryHistoryItem] {
+        guard !storyHistoryData.isEmpty else { return [] }
+
+        return (try? JSONDecoder().decode([StoryHistoryItem].self, from: storyHistoryData)) ?? []
+    }
+
+    private func saveStoryHistory(_ stories: [StoryHistoryItem]) {
+        storyHistoryData = (try? JSONEncoder().encode(stories)) ?? Data()
     }
 }
 
@@ -253,6 +318,95 @@ private struct StoryInputField<Content: View>: View {
 
     private var inputBorderColor: Color {
         colorScheme == .dark ? .white.opacity(0.08) : .black.opacity(0.07)
+    }
+}
+
+private struct StoryHistoryView: View {
+    let stories: [StoryHistoryItem]
+    let onSelect: (StoryHistoryItem) -> Void
+    let onDelete: (IndexSet) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if stories.isEmpty {
+                    ContentUnavailableView(
+                        "No Past Stories",
+                        systemImage: "clock",
+                        description: Text("Export a story to keep it here.")
+                    )
+                } else {
+                    List {
+                        ForEach(stories) { story in
+                            Button {
+                                onSelect(story)
+                            } label: {
+                                StoryHistoryRow(story: story)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .onDelete(perform: onDelete)
+                    }
+                }
+            }
+            .navigationTitle("Past Stories")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StoryHistoryRow: View {
+    let story: StoryHistoryItem
+
+    private var title: String {
+        let trimmedTitle = story.draft.trimmedTitle
+        return trimmedTitle.isEmpty ? "Untitled Story" : trimmedTitle
+    }
+
+    private var bodyPreview: String {
+        let trimmedBody = story.draft.trimmedBody
+        return trimmedBody.isEmpty ? "No body text" : trimmedBody
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Spacer(minLength: 8)
+
+                Text(story.createdAt, style: .date)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Text(bodyPreview)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            if !story.draft.trimmedAuthorDateLine.isEmpty {
+                Text(story.draft.trimmedAuthorDateLine)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-struct StoryDraft: Equatable {
+struct StoryDraft: Codable, Equatable {
     var title: String = ""
     var body: String = ""
     var authorDateLine: String = ""
@@ -15,5 +15,17 @@ struct StoryDraft: Equatable {
 
     var trimmedAuthorDateLine: String {
         authorDateLine.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+struct StoryHistoryItem: Codable, Identifiable, Equatable {
+    let id: UUID
+    var draft: StoryDraft
+    var createdAt: Date
+
+    init(id: UUID = UUID(), draft: StoryDraft, createdAt: Date = .now) {
+        self.id = id
+        self.draft = draft
+        self.createdAt = createdAt
     }
 }
