@@ -55,7 +55,7 @@ struct EditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .scrollDismissesKeyboard(.interactively)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
                     Button {
                         isShowingHistory = true
                     } label: {
@@ -64,6 +64,14 @@ struct EditorView: View {
                             .symbolRenderingMode(.hierarchical)
                     }
                     .accessibilityLabel("Story history")
+
+                    Button(action: startNewStory) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 15, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    .disabled(isDraftEmpty)
+                    .accessibilityLabel("New story")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -235,6 +243,10 @@ struct EditorView: View {
     private func loadStory(_ story: StoryHistoryItem) {
         draft = story.draft
         isShowingHistory = false
+    }
+
+    private func startNewStory() {
+        draft = StoryDraft()
     }
 
     private func saveCurrentStoryToHistory() -> Bool {
